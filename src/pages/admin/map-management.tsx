@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Upload, Loader2, Map, Table2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getMapPois, getMapCategories, getMapCampuses } from "@/services/map";
-import { deleteMapPoi, importMapPoi } from "@/services/admin/map";
+import { updateMapPoi, deleteMapPoi, importMapPoi } from "@/services/admin/map";
 import type { MapPoiModel, MapPoiFormData } from "@/types/map";
 import { DataTable } from "@/components/shared/data-table";
 import { SearchInput } from "@/components/shared/search-input";
@@ -114,7 +114,8 @@ export default function MapManagementPage() {
     if (!editing?.id) return;
     setSaving(true);
     try {
-      await importMapPoi({ ...editForm, id: editing.id } as MapPoiFormData);
+      const updated = await updateMapPoi(editing.id, editForm);
+      setPois((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       toast.success("更新成功");
       setEditOpen(false);
     } catch (err) {

@@ -1,6 +1,6 @@
 import request from "../xauat-request";
 import type { ApiResponse } from "../../types/api";
-import type { MapPoiFormData } from "../../types/map";
+import type { MapPoiFormData, MapPoiModel } from "../../types/map";
 
 /** 导入单个 POI */
 export async function importMapPoi(data: MapPoiFormData): Promise<void> {
@@ -15,6 +15,12 @@ export async function importMapPoisBatch(data: MapPoiFormData[]): Promise<void> 
 /** 清除所有 POI */
 export async function clearMapPois(): Promise<void> {
   await request.delete<ApiResponse>("/v1/map/clear");
+}
+
+/** 更新 POI */
+export async function updateMapPoi(id: number, data: Partial<MapPoiFormData>): Promise<MapPoiModel> {
+  const res = await request.put<ApiResponse<MapPoiModel>>(`/v1/map/${id}`, data);
+  return res.data.data!;
 }
 
 /** 删除单个 POI */
