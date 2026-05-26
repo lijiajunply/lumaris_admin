@@ -1,10 +1,6 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
-import { PublicLayout } from "@/components/layout/public-layout";
+import { createBrowserRouter } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
-import MapBrowsePage from "@/pages/public/map-browse";
-import MapDetailPage from "@/pages/public/map-detail";
-import SchoolListPage from "@/pages/public/school-list";
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
 import MapManagementPage from "@/pages/admin/map-management";
@@ -13,16 +9,7 @@ import NotFoundPage from "@/pages/not-found";
 
 export const router = createBrowserRouter([
   {
-    element: <PublicLayout />,
-    children: [
-      { index: true, element: <Navigate to="/map" replace /> },
-      { path: "map", element: <MapBrowsePage /> },
-      { path: "map/:id", element: <MapDetailPage /> },
-      { path: "schools", element: <SchoolListPage /> },
-    ],
-  },
-  {
-    path: "admin/login",
+    index: true,
     element: <LoginPage />,
   },
   {
@@ -40,10 +27,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: (
-      <PublicLayout>
-        <NotFoundPage />
-      </PublicLayout>
-    ),
+    element: <NotFoundPage />,
   },
 ]);
