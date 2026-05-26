@@ -18,7 +18,7 @@ export async function clearMapPois(): Promise<void> {
 }
 
 /** 更新 POI */
-export async function updateMapPoi(id: number, data: Partial<MapPoiFormData>): Promise<MapPoiModel> {
+export async function updateMapPoi(id: number, data: MapPoiModel): Promise<MapPoiModel> {
   const res = await request.put<ApiResponse<MapPoiModel>>(`/v1/map/${id}`, data);
   return res.data.data!;
 }

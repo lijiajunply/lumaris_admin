@@ -88,7 +88,7 @@ export default function MapManagementPage() {
 
   const filtered = pois.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
       (p.category && p.category.toLowerCase().includes(search.toLowerCase())) ||
       (p.campus && p.campus.toLowerCase().includes(search.toLowerCase()))
   );
@@ -114,7 +114,7 @@ export default function MapManagementPage() {
     if (!editing?.id) return;
     setSaving(true);
     try {
-      const updated = await updateMapPoi(editing.id, editForm);
+      const updated = await updateMapPoi(editing.id, { ...editing, ...editForm } as MapPoiModel);
       setPois((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       toast.success("更新成功");
       setEditOpen(false);
