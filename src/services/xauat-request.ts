@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { ApiResponse } from "../types/api";
 
-const XAUAT_BASE_URL = import.meta.env.VITE_XAUAT_API_BASE_URL ?? "http://xauatapi.xauat.site/";
+const XAUAT_BASE_URL = import.meta.env.VITE_XAUAT_API_BASE_URL ?? "https://xauatapi.xauat.site/";
 
 const xauatRequest = axios.create({
   baseURL: XAUAT_BASE_URL,
