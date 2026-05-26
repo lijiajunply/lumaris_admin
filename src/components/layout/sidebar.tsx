@@ -1,9 +1,7 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, MapPin, School, LogOut, Menu } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { LayoutDashboard, MapPin, School, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { useAuth } from "@/stores/auth-provider";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -16,13 +14,6 @@ const navItems = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/admin/login");
-  };
 
   return (
     <div className="flex h-full flex-col">
@@ -58,18 +49,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-
-      <div className="px-3 py-4 border-t border-border/50 space-y-2">
-        <ThemeToggle />
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 rounded-xl text-muted-foreground hover:text-foreground"
-          onClick={handleLogout}
-        >
-          <LogOut className="size-4" />
-          退出登录
-        </Button>
-      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function NotFoundPage() {
@@ -13,10 +13,6 @@ export default function NotFoundPage() {
         您访问的页面不存在或已被移除
       </p>
       <div className="flex items-center gap-3 mt-6">
-        <Button variant="outline" className="rounded-xl gap-2" onClick={() => navigate(-1)}>
-          <ArrowLeft className="size-4" />
-          返回上页
-        </Button>
         <Button className="rounded-xl gap-2" onClick={() => navigate("/")}>
           <Home className="size-4" />
           返回首页

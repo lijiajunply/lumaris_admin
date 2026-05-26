@@ -8,15 +8,14 @@ const instance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-/** 设置 Admin 接口所需的 Bearer token */
-export function setAdminToken(token: string): void {
-  instance.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
-
-/** 清除 Admin token */
-export function clearAdminToken(): void {
-  delete instance.defaults.headers.common.Authorization;
-}
+// 请求拦截：自动从 localStorage 读取 token 附加到请求头
+instance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("lumaris-token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // 响应拦截：统一处理错误
 instance.interceptors.response.use(

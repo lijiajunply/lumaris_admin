@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { setAdminToken, clearAdminToken } from "@/services/request";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface AuthContextType {
   token: string | null;
@@ -18,12 +17,6 @@ function getStoredToken(): string | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(getStoredToken);
 
-  useEffect(() => {
-    if (token) {
-      setAdminToken(token);
-    }
-  }, [token]);
-
   const login = (newToken: string) => {
     localStorage.setItem("lumaris-token", newToken);
     setToken(newToken);
@@ -31,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("lumaris-token");
-    clearAdminToken();
     setToken(null);
   };
 
