@@ -1,0 +1,22 @@
+import axios from "axios";
+import type { ApiResponse } from "../types/api";
+
+const XAUAT_BASE_URL = import.meta.env.VITE_XAUAT_API_BASE_URL ?? "http://xauatapi.xauat.site/";
+
+const xauatRequest = axios.create({
+  baseURL: XAUAT_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+xauatRequest.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const body = error.response.data as ApiResponse;
+      return Promise.reject(new Error(body?.message || `请求失败 (${error.response.status})`));
+    }
+    return Promise.reject(error);
+  },
+);
+
+export default xauatRequest;
