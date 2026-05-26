@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Loader2, Map, Table2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getMapPois, getMapCategories, getMapCampuses } from "@/services/map";
 import { updateMapPoi, deleteMapPoi, importMapPoi } from "@/services/admin/map";
@@ -9,6 +9,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
+import { MapView } from "@/components/shared/map-view";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -55,6 +56,9 @@ export default function MapManagementPage() {
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<MapPoiModel | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // View mode: table or map
+  const [viewMode, setViewMode] = useState<"table" | "map">("table");
 
   // Filter options
   const [categories, setCategories] = useState<string[]>([]);
@@ -193,20 +197,50 @@ export default function MapManagementPage() {
           <h1 className="text-3xl font-bold tracking-tight">地图管理</h1>
           <p className="text-muted-foreground mt-1.5">管理地图兴趣点数据</p>
         </div>
-        <Button className="rounded-xl gap-2" onClick={() => setImportOpen(true)}>
-          <Plus className="size-4" />
-          导入 POI
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-xl border bg-muted/50 p-0.5">
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "table"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setViewMode("table")}
+            >
+              <Table2 className="size-3.5" />
+              表格
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "map"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setViewMode("map")}
+            >
+              <Map className="size-3.5" />
+              地图
+            </button>
+          </div>
+          <Button className="rounded-xl gap-2" onClick={() => setImportOpen(true)}>
+            <Plus className="size-4" />
+            导入 POI
+          </Button>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="搜索名称、分类或校区..."
-          className="max-w-md"
-        />
-      </div>
+      {viewMode === "table" && (
+        <div className="mb-6">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="搜索名称、分类或校区..."
+            className="max-w-md"
+          />
+        </div>
+      )}
 
       {!loading && pois.length === 0 ? (
         <EmptyState
@@ -218,6 +252,12 @@ export default function MapManagementPage() {
               导入 POI
             </Button>
           }
+        />
+      ) : viewMode === "map" ? (
+        <MapView
+          pois={filtered}
+          onMarkerClick={openEdit}
+          className="h-[70vh] min-h-125 rounded-2xl overflow-hidden border"
         />
       ) : (
         <DataTable columns={columns} data={filtered} />
