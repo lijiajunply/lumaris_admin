@@ -1,27 +1,41 @@
 import request from "../request";
 import type { ApiResponse, PaginatedData } from "../../types/api";
-import type { School } from "../../types/school";
+import type { School, Feature } from "../../types/school";
 
-export interface SchoolFormData {
+export interface CreateSchoolData {
   code: string;
   name: string;
+  website: string;
+  features: Feature[];
+}
+
+export interface UpdateSchoolData {
+  name?: string;
+  website?: string;
+  features?: Feature[];
   enabled?: boolean;
 }
 
-/** 列出所有学校（含未启用） */
-export async function getAdminSchools(): Promise<PaginatedData<School>> {
-  const res = await request.get<ApiResponse<PaginatedData<School>>>("/api/v1/admin/schools");
+/** 列出所有学校（含未启用），支持分页 */
+export async function getAdminSchools(
+  page = 1,
+  pageSize = 50,
+): Promise<PaginatedData<School>> {
+  const res = await request.get<ApiResponse<PaginatedData<School>>>(
+    "/api/v1/admin/schools",
+    { params: { page, page_size: pageSize } },
+  );
   return res.data.data;
 }
 
 /** 新增学校 */
-export async function createSchool(data: SchoolFormData): Promise<School> {
+export async function createSchool(data: CreateSchoolData): Promise<School> {
   const res = await request.post<ApiResponse<School>>("/api/v1/admin/schools", data);
   return res.data.data;
 }
 
 /** 更新学校（部分更新） */
-export async function updateSchool(code: string, data: Partial<SchoolFormData>): Promise<School> {
+export async function updateSchool(code: string, data: UpdateSchoolData): Promise<School> {
   const res = await request.put<ApiResponse<School>>(
     `/api/v1/admin/schools/${encodeURIComponent(code)}`,
     data,

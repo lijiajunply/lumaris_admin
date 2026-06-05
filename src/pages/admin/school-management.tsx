@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getAdminSchools, createSchool, updateSchool, deleteSchool } from "@/services/admin/school";
-import type { School } from "@/types/school";
+import type { School, Feature } from "@/types/school";
+import { FEATURE_LABELS, ALL_FEATURES } from "@/types/school";
 import { DataTable } from "@/components/shared/data-table";
 import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -30,8 +31,10 @@ export default function SchoolManagementPage() {
   // Form dialog
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<School | null>(null);
-  const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formWebsite, setFormWebsite] = useState("");
+  const [formFeatures, setFormFeatures] = useState<Feature[]>([]);
   const [formEnabled, setFormEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -58,42 +61,54 @@ export default function SchoolManagementPage() {
   const filtered = schools.filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.code.toLowerCase().includes(search.toLowerCase())
+      s.code.toLowerCase().includes(search.toLowerCase()),
   );
 
   const openCreate = () => {
     setEditing(null);
-    setFormName("");
     setFormCode("");
+    setFormName("");
+    setFormWebsite("");
+    setFormFeatures([]);
     setFormEnabled(true);
     setFormOpen(true);
   };
 
   const openEdit = (school: School) => {
     setEditing(school);
-    setFormName(school.name);
     setFormCode(school.code);
+    setFormName(school.name);
+    setFormWebsite(school.website);
+    setFormFeatures(school.features ?? []);
     setFormEnabled(school.enabled);
     setFormOpen(true);
   };
 
+  const toggleFeature = (f: Feature) => {
+    setFormFeatures((prev) =>
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
+    );
+  };
+
   const handleSave = async () => {
-    if (!formName.trim() || !formCode.trim()) return;
+    if (!formName.trim() || !formCode.trim() || !formWebsite.trim()) return;
     setSaving(true);
     try {
       if (editing) {
         const updated = await updateSchool(editing.code, {
           name: formName.trim(),
-          code: formCode.trim(),
+          website: formWebsite.trim(),
+          features: formFeatures,
           enabled: formEnabled,
         });
         setSchools((prev) => prev.map((s) => (s.code === editing.code ? updated : s)));
         toast.success("更新成功");
       } else {
         const created = await createSchool({
-          name: formName.trim(),
           code: formCode.trim(),
-          enabled: formEnabled,
+          name: formName.trim(),
+          website: formWebsite.trim(),
+          features: formFeatures,
         });
         setSchools((prev) => [...prev, created]);
         toast.success("创建成功");
@@ -125,6 +140,36 @@ export default function SchoolManagementPage() {
     { accessorKey: "code", header: "代码" },
     { accessorKey: "name", header: "名称" },
     {
+      accessorKey: "website",
+      header: "官网",
+      cell: ({ getValue }) => (
+        <a
+          href={getValue() as string}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-4 hover:underline text-sm truncate max-w-45 block"
+        >
+          {getValue() as string}
+        </a>
+      ),
+    },
+    {
+      accessorKey: "features",
+      header: "功能",
+      cell: ({ getValue }) => {
+        const features = (getValue() as Feature[]) ?? [];
+        return (
+          <div className="flex flex-wrap gap-1 max-w-75">
+            {features.map((f) => (
+              <Badge key={f} variant="outline" className="rounded-md text-xs px-1.5 py-0">
+                {FEATURE_LABELS[f] ?? f}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "enabled",
       header: "状态",
       cell: ({ getValue }) => (
@@ -153,6 +198,8 @@ export default function SchoolManagementPage() {
       ),
     },
   ];
+
+  const isSaveDisabled = saving || !formName.trim() || !formCode.trim() || !formWebsite.trim();
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -193,7 +240,7 @@ export default function SchoolManagementPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-sm">
+        <DialogContent className="rounded-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "编辑学校" : "添加学校"}</DialogTitle>
             <DialogDescription>
@@ -206,7 +253,7 @@ export default function SchoolManagementPage() {
               <Input
                 value={formCode}
                 onChange={(e) => setFormCode(e.target.value)}
-                placeholder="例如: xauat"
+                placeholder="例如: XAUAT"
                 className="rounded-xl"
                 disabled={!!editing}
               />
@@ -220,17 +267,50 @@ export default function SchoolManagementPage() {
                 className="rounded-xl"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="form-enabled"
-                checked={formEnabled}
-                onCheckedChange={(v) => setFormEnabled(!!v)}
-                className="rounded"
+            <div className="space-y-1.5">
+              <Label>官方网站 *</Label>
+              <Input
+                value={formWebsite}
+                onChange={(e) => setFormWebsite(e.target.value)}
+                placeholder="https://www.example.edu.cn"
+                className="rounded-xl"
+                type="url"
               />
-              <Label htmlFor="form-enabled" className="text-sm font-normal cursor-pointer">
-                启用
-              </Label>
             </div>
+            <div className="space-y-2">
+              <Label>功能模块</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {ALL_FEATURES.map((f) => (
+                  <div key={f} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`feature-${f}`}
+                      checked={formFeatures.includes(f)}
+                      onCheckedChange={() => toggleFeature(f)}
+                      className="rounded"
+                    />
+                    <Label
+                      htmlFor={`feature-${f}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {FEATURE_LABELS[f]}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {editing && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="form-enabled"
+                  checked={formEnabled}
+                  onCheckedChange={(v) => setFormEnabled(!!v)}
+                  className="rounded"
+                />
+                <Label htmlFor="form-enabled" className="text-sm font-normal cursor-pointer">
+                  启用
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl">
@@ -238,7 +318,7 @@ export default function SchoolManagementPage() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || !formName.trim() || !formCode.trim()}
+              disabled={isSaveDisabled}
               className="rounded-xl"
             >
               {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
@@ -251,7 +331,9 @@ export default function SchoolManagementPage() {
       {/* Delete Confirm */}
       <ConfirmDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="确认删除"
         description={`确定要删除学校「${deleteTarget?.name}」吗？此操作不可撤销。`}
         confirmLabel="删除"
