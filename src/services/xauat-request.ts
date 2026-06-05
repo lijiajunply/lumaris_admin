@@ -8,6 +8,14 @@ const xauatRequest = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+xauatRequest.interceptors.request.use((config) => {
+  const token = localStorage.getItem("lumaris-token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 xauatRequest.interceptors.response.use(
   (response) => response,
   (error) => {
