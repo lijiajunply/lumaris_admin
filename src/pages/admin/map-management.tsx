@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, Loader2, Map, Table2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Loader2, Map, Table2, FileSpreadsheet, X, AlertCircle } from "lucide-react";
+import * as XLSX from "xlsx";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getMapPois, getMapCategories, getMapCampuses } from "@/services/map";
-import { updateMapPoi, deleteMapPoi, importMapPoi } from "@/services/admin/map";
+import { updateMapPoi, deleteMapPoi, importMapPoi, importMapPoisBatch } from "@/services/admin/map";
 import type { MapPoiModel, MapPoiFormData } from "@/types/map";
 import { DataTable } from "@/components/shared/data-table";
 import { SearchInput } from "@/components/shared/search-input";
@@ -56,6 +57,15 @@ export default function MapManagementPage() {
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<MapPoiModel | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Excel batch import
+  const [excelOpen, setExcelOpen] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelData, setExcelData] = useState<MapPoiFormData[]>([]);
+  const [excelErrors, setExcelErrors] = useState<string[]>([]);
+  const [excelImporting, setExcelImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // View mode: table or map
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
@@ -155,6 +165,105 @@ export default function MapManagementPage() {
     }
   };
 
+  const parseExcelFile = (file: File) => {
+    setExcelFile(file);
+    setExcelData([]);
+    setExcelErrors([]);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) {
+          toast.error("文件读取失败");
+          return;
+        }
+
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) {
+          toast.error("Excel 文件中没有工作表");
+          return;
+        }
+
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+        if (rows.length === 0) {
+          toast.error("Excel 文件为空");
+          return;
+        }
+
+        const pois: MapPoiFormData[] = [];
+        const errors: string[] = [];
+
+        rows.forEach((row, i) => {
+          const name = String(row["名称"] ?? row["name"] ?? "").trim();
+          const category = String(row["分类"] ?? row["category"] ?? "").trim();
+          const latitude = Number(row["纬度"] ?? row["latitude"] ?? 0);
+          const longitude = Number(row["经度"] ?? row["longitude"] ?? 0);
+          const campus = String(row["校区"] ?? row["campus"] ?? "").trim();
+          const address = String(row["地址"] ?? row["address"] ?? "").trim();
+          const description = String(row["描述"] ?? row["description"] ?? "").trim();
+
+          if (!name) {
+            errors.push(`第 ${i + 2} 行：名称为空`);
+            return;
+          }
+          if (!latitude || !longitude || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+            errors.push(`第 ${i + 2} 行「${name}」：经纬度无效`);
+            return;
+          }
+
+          pois.push({ name, category, latitude, longitude, campus, address, description });
+        });
+
+        setExcelData(pois);
+        setExcelErrors(errors);
+
+        if (pois.length === 0 && errors.length === 0) {
+          toast.error("未能解析到有效数据，请检查 Excel 格式");
+        }
+      } catch {
+        setExcelErrors(["Excel 文件解析失败，请确认文件格式正确"]);
+        toast.error("Excel 解析失败");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) parseExcelFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) parseExcelFile(file);
+  };
+
+  const handleExcelImport = async () => {
+    if (excelData.length === 0) return;
+    setExcelImporting(true);
+    try {
+      await importMapPoisBatch(excelData);
+      toast.success(`成功导入 ${excelData.length} 条数据`);
+      setExcelOpen(false);
+      setExcelFile(null);
+      setExcelData([]);
+      setExcelErrors([]);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "批量导入失败");
+    } finally {
+      setExcelImporting(false);
+    }
+  };
+
   const columns: ColumnDef<MapPoiModel, unknown>[] = [
     { accessorKey: "id", header: "ID", size: 60 },
     { accessorKey: "name", header: "名称" },
@@ -227,6 +336,10 @@ export default function MapManagementPage() {
           <Button className="rounded-xl gap-2" onClick={() => setImportOpen(true)}>
             <Plus className="size-4" />
             导入 POI
+          </Button>
+          <Button variant="outline" className="rounded-xl gap-2" onClick={() => setExcelOpen(true)}>
+            <FileSpreadsheet className="size-4" />
+            批量导入
           </Button>
         </div>
       </div>
@@ -461,6 +574,160 @@ export default function MapManagementPage() {
             >
               {importing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               导入
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excel Batch Import Dialog */}
+      <Dialog open={excelOpen} onOpenChange={(open) => { if (!open) { setExcelOpen(false); setExcelFile(null); setExcelData([]); setExcelErrors([]); } }}>
+        <DialogContent className="rounded-2xl sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Excel 批量导入</DialogTitle>
+            <DialogDescription>
+              上传 Excel 文件（.xlsx / .xls），批量导入地图兴趣点
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* File Upload Area */}
+            <div
+              className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+                dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
+              } ${excelFile ? "bg-muted/30" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+            >
+              {excelFile ? (
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="size-8 text-green-600" />
+                  <div>
+                    <p className="font-medium text-sm">{excelFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(excelFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-lg ml-2"
+                    onClick={() => { setExcelFile(null); setExcelData([]); setExcelErrors([]); }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <FileSpreadsheet className="size-10 text-muted-foreground mb-3" />
+                  <p className="text-sm font-medium mb-1">拖拽 Excel 文件到此处</p>
+                  <p className="text-xs text-muted-foreground mb-3">或点击下方按钮选择文件</p>
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    选择文件
+                  </Button>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* Column Format Hint */}
+            {!excelFile && (
+              <div className="rounded-xl border bg-muted/30 p-4">
+                <p className="text-sm font-medium mb-2">Excel 列格式要求</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                  <div><span className="font-mono text-foreground">名称 *</span> — 必填，地点名称</div>
+                  <div><span className="font-mono text-foreground">分类</span> — 地点分类</div>
+                  <div><span className="font-mono text-foreground">纬度 *</span> — 必填，如 34.23</div>
+                  <div><span className="font-mono text-foreground">经度 *</span> — 必填，如 108.96</div>
+                  <div><span className="font-mono text-foreground">校区</span> — 所属校区</div>
+                  <div><span className="font-mono text-foreground">地址</span> — 详细地址</div>
+                  <div className="col-span-2"><span className="font-mono text-foreground">描述</span> — 备注信息</div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">也支持英文列名：name, category, latitude, longitude, campus, address, description</p>
+              </div>
+            )}
+
+            {/* Parse Errors */}
+            {excelErrors.length > 0 && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="size-4 text-destructive" />
+                  <span className="text-sm font-medium text-destructive">{excelErrors.length} 行数据存在问题</span>
+                </div>
+                <ul className="text-xs text-destructive/80 space-y-0.5 max-h-32 overflow-y-auto">
+                  {excelErrors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Preview Table */}
+            {excelData.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">
+                  预览：共 <span className="text-primary">{excelData.length}</span> 条有效数据
+                </p>
+                <div className="rounded-xl border overflow-hidden">
+                  <div className="max-h-60 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/50 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">#</th>
+                          <th className="px-3 py-2 text-left font-medium">名称</th>
+                          <th className="px-3 py-2 text-left font-medium">分类</th>
+                          <th className="px-3 py-2 text-left font-medium">纬度</th>
+                          <th className="px-3 py-2 text-left font-medium">经度</th>
+                          <th className="px-3 py-2 text-left font-medium">校区</th>
+                          <th className="px-3 py-2 text-left font-medium">地址</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {excelData.slice(0, 100).map((poi, i) => (
+                          <tr key={i} className="border-t hover:bg-muted/30">
+                            <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
+                            <td className="px-3 py-1.5 font-medium">{poi.name}</td>
+                            <td className="px-3 py-1.5">{poi.category || "-"}</td>
+                            <td className="px-3 py-1.5 font-mono">{poi.latitude}</td>
+                            <td className="px-3 py-1.5 font-mono">{poi.longitude}</td>
+                            <td className="px-3 py-1.5">{poi.campus || "-"}</td>
+                            <td className="px-3 py-1.5 max-w-40 truncate">{poi.address || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {excelData.length > 100 && (
+                      <p className="text-xs text-muted-foreground text-center py-2 border-t">
+                        仅显示前 100 条，共 {excelData.length} 条
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setExcelOpen(false); setExcelFile(null); setExcelData([]); setExcelErrors([]); }} className="rounded-xl">
+              取消
+            </Button>
+            <Button
+              onClick={handleExcelImport}
+              disabled={excelImporting || excelData.length === 0}
+              className="rounded-xl gap-2"
+            >
+              {excelImporting ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              导入 {excelData.length > 0 ? `${excelData.length} 条` : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
