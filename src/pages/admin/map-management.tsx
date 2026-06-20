@@ -32,6 +32,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function sanitizeSelectOptions(items: string[]) {
+  return items.filter((item) => item.trim() !== "");
+}
+
 export default function MapManagementPage() {
   const [pois, setPois] = useState<MapPoiModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,8 +87,8 @@ export default function MapManagementPage() {
         getMapCampuses(),
       ]);
       setPois(poiData);
-      setCategories(cats);
-      setCampuses(camps);
+      setCategories(sanitizeSelectOptions(cats));
+      setCampuses(sanitizeSelectOptions(camps));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -211,7 +215,7 @@ export default function MapManagementPage() {
             return;
           }
           if (!latitude || !longitude || Number.isNaN(latitude) || Number.isNaN(longitude)) {
-            errors.push(`第 ${i + 2} 行「${name}」：经纬度无效`);
+            errors.push(`第 ${i + 2} 行「${name}」：经纬度无效, 纬度: ${latitude}, 经度: ${longitude}`);
             return;
           }
 
