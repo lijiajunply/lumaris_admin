@@ -29,12 +29,24 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 
 export const ALL_FEATURES: Feature[] = Object.keys(FEATURE_LABELS) as Feature[];
 
+/** Weekday values used by the school API (0 = Sunday, 6 = Saturday). */
+export const WEEK_DAYS = [
+  { value: 0, label: "周日" },
+  { value: 1, label: "周一" },
+  { value: 2, label: "周二" },
+  { value: 3, label: "周三" },
+  { value: 4, label: "周四" },
+  { value: 5, label: "周五" },
+  { value: 6, label: "周六" },
+] as const;
+
 export interface School {
   code: string;
   name: string;
   website: string;
   features: Feature[];
   enabled: boolean;
+  week_start_day: number;
   created_at: string;
   updated_at: string;
 }

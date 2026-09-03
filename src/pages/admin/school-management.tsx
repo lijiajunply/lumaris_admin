@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { getAdminSchools, createSchool, updateSchool, deleteSchool } from "@/services/admin/school";
 import type { School, Feature } from "@/types/school";
-import { FEATURE_LABELS, ALL_FEATURES } from "@/types/school";
+import { FEATURE_LABELS, ALL_FEATURES, WEEK_DAYS } from "@/types/school";
 import { DataTable } from "@/components/shared/data-table";
 import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -22,6 +22,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function SchoolManagementPage() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -36,6 +43,7 @@ export default function SchoolManagementPage() {
   const [formWebsite, setFormWebsite] = useState("");
   const [formFeatures, setFormFeatures] = useState<Feature[]>([]);
   const [formEnabled, setFormEnabled] = useState(true);
+  const [formWeekStartDay, setFormWeekStartDay] = useState(0);
   const [saving, setSaving] = useState(false);
 
   // Delete dialog
@@ -71,6 +79,7 @@ export default function SchoolManagementPage() {
     setFormWebsite("");
     setFormFeatures([]);
     setFormEnabled(true);
+    setFormWeekStartDay(0);
     setFormOpen(true);
   };
 
@@ -81,6 +90,7 @@ export default function SchoolManagementPage() {
     setFormWebsite(school.website);
     setFormFeatures(school.features ?? []);
     setFormEnabled(school.enabled);
+    setFormWeekStartDay(school.week_start_day ?? 0);
     setFormOpen(true);
   };
 
@@ -100,6 +110,7 @@ export default function SchoolManagementPage() {
           website: formWebsite.trim(),
           features: formFeatures,
           enabled: formEnabled,
+          week_start_day: formWeekStartDay,
         });
         setSchools((prev) => prev.map((s) => (s.code === editing.code ? updated : s)));
         toast.success("更新成功");
@@ -109,6 +120,7 @@ export default function SchoolManagementPage() {
           name: formName.trim(),
           website: formWebsite.trim(),
           features: formFeatures,
+          week_start_day: formWeekStartDay,
         });
         setSchools((prev) => [...prev, created]);
         toast.success("创建成功");
@@ -177,6 +189,14 @@ export default function SchoolManagementPage() {
           {getValue() ? "已启用" : "未启用"}
         </Badge>
       ),
+    },
+    {
+      accessorKey: "week_start_day",
+      header: "周起始日",
+      cell: ({ getValue }) => {
+        const day = WEEK_DAYS.find(({ value }) => value === getValue());
+        return day?.label ?? "周日";
+      },
     },
     {
       id: "actions",
@@ -297,6 +317,24 @@ export default function SchoolManagementPage() {
                   </div>
                 ))}
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="week-start-day">周起始日</Label>
+              <Select
+                value={String(formWeekStartDay)}
+                onValueChange={(value) => setFormWeekStartDay(Number(value))}
+              >
+                <SelectTrigger id="week-start-day" className="rounded-xl w-full">
+                  <SelectValue placeholder="选择周起始日" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEK_DAYS.map(({ value, label }) => (
+                    <SelectItem key={value} value={String(value)}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {editing && (
               <div className="flex items-center gap-2">

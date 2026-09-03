@@ -7,6 +7,7 @@ export interface CreateSchoolData {
   name: string;
   website: string;
   features: Feature[];
+  week_start_day: number;
 }
 
 export interface UpdateSchoolData {
@@ -14,6 +15,7 @@ export interface UpdateSchoolData {
   website?: string;
   features?: Feature[];
   enabled?: boolean;
+  week_start_day?: number;
 }
 
 /** 列出所有学校（含未启用），支持分页 */
