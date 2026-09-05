@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, MapPin, School, Menu } from "lucide-react";
+import { LayoutDashboard, MapPin, School, Menu, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -10,6 +10,7 @@ const navItems = [
   { to: "/admin", label: "仪表盘", icon: LayoutDashboard },
   { to: "/admin/map", label: "地图管理", icon: MapPin },
   { to: "/admin/schools", label: "学校管理", icon: School },
+  { to: "/admin/logs", label: "系统日志", icon: ScrollText },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {

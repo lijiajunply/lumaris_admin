@@ -5,6 +5,7 @@ import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
 import MapManagementPage from "@/pages/admin/map-management";
 import SchoolManagementPage from "@/pages/admin/school-management";
+import LogsPage from "@/pages/admin/logs";
 import NotFoundPage from "@/pages/not-found";
 
 export const router = createBrowserRouter([
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
           { path: "admin", element: <DashboardPage /> },
           { path: "admin/map", element: <MapManagementPage /> },
           { path: "admin/schools", element: <SchoolManagementPage /> },
+          { path: "admin/logs", element: <LogsPage /> },
         ],
       },
     ],
