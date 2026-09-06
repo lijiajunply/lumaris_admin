@@ -2,7 +2,7 @@ import axios from "axios";
 import type { ApiResponse } from "../types/api";
 
 const flaskRequest = axios.create({
-  baseURL: import.meta.env.VITE_FLASK_API_BASE_URL ?? "http://localhost:6173/",
+  baseURL: import.meta.env.VITE_FLASK_API_BASE_URL ?? "https://schedule.xauat.site/",
   headers: { "Content-Type": "application/json" },
 });
 
